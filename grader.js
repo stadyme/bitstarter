@@ -48,31 +48,41 @@ var loadChecks = function(checksfile) {
 
 var checkHtmlFile = function(htmlfile, checksfile) {
     $ = cheerioHtmlFile(htmlfile);
+    console.log(htmlfile);
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
         var present = $(checks[ii]).length > 0;
         out[checks[ii]] = present;
     }
+    
     return out;
 };
 
 var checkURL = function(url, checksfile) {
-    
-    rest.get(program.url).on('complete', function(result){
-	fs.writeFileSync('output.html',result);
+    return rest.get(url).on('complete',function(result) {
+	if (result instanceof Error) {
+	    console.log('Error: ' + result.message);
+	}
+	else {
+	
+	    $ = cheerio.load(result);
+
+	    var checks = loadChecks(checksfile).sort();
+	    var out = {};
+	    for(var ii in checks) {
+		var present = $(checks[ii]).length > 0;
+		out[checks[ii]] = present;
+	    }
+	    
+	    var outJson = JSON.stringify(out, null, 4);
+            console.log(outJson);
+	}
     });
-    
-    $ = cheerioHtmlFile('output.html');
-    var checks = loadChecks(checksfile).sort();
-    var out = {};
-    for(var ii in checks) {
-        var present = $(checks[ii]).length > 0;
-        out[checks[ii]] = present;
-    }
-    return out;
 };
 
+var restGet = function(url) {
+};
 var clone = function(fn) {
     // Workaround for commander.js issue.
     // http://stackoverflow.com/a/6772648
@@ -86,14 +96,15 @@ if(require.main == module) {
         .option('-u, --url <url>', 'Path to url')
 	.parse(process.argv);
     if(program.url) {
-	
-var checkJson = checkURL(program.url, program.checks);
+	console.log("First get in the function");
+	var checkJson = checkURL(program.url, program.checks);
     }
     else {
+	console.log("Don't go here!");
 	var checkJson = checkHtmlFile(program.file, program.checks);
+	var outJson = JSON.stringify(checkJson, null, 4);
+	console.log(outJson);
     }
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
